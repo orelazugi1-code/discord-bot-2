@@ -1,4 +1,3 @@
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const https = require('https');
 const http  = require('http');
 
@@ -23,6 +22,7 @@ function fetchBuffer(url) {
  * @param {object}      config  { welcome_message, bg_color? }
  */
 async function generateWelcomeCard(member, config = {}) {
+  const { createCanvas, loadImage } = require('@napi-rs/canvas');
   const W = 900, H = 300;
   const canvas = createCanvas(W, H);
   const ctx    = canvas.getContext('2d');
@@ -185,7 +185,7 @@ async function generateWelcomeCard(member, config = {}) {
   ctx.fillStyle    = 'rgba(180,160,255,0.65)';
   ctx.fillText(memberText, TX + 10, badgeY);
 
-  return canvas.toBuffer('image/png');
+  return canvas.encode('png');
 }
 
 function roundRect(ctx, x, y, w, h, r) {
