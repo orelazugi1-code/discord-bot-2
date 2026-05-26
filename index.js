@@ -240,4 +240,15 @@ const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
 const missing = ['BOT_TOKEN', 'CLIENT_ID', 'CLIENT_SECRET', 'SESSION_SECRET']
   .filter(k => !process.env[k]?.trim());
 if (missing.length) console.warn('⚠️  Missing env vars:', missing.join(', '));
-client.login(BOT_TOKEN);
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UnhandledRejection]', reason);
+});
+
+if (!BOT_TOKEN) {
+  console.error('❌ BOT_TOKEN is not set. Bot will not connect to Discord.');
+  console.error('   Set BOT_TOKEN in Render dashboard → Environment.');
+} else {
+  client.login(BOT_TOKEN).catch(err => {
+    console.error('Failed to login to Discord:', err.message);
+  });
+}

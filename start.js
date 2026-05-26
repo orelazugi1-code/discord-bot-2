@@ -1,20 +1,22 @@
-// Launches bot + dashboard together as a single service.
-// --experimental-sqlite is passed explicitly so node:sqlite works on Node 22
-// regardless of whether NODE_OPTIONS is set in the environment.
 const { spawn } = require('child_process');
+const path     = require('path');
 
-const nodeFlags = ['--experimental-sqlite'];
+// ── Dashboard runs in THIS process so Render's health-check always has an HTTP server ──
+// The bot is spawned as a separate child so crashes don't kill the HTTP endpoint.
+require('./dashboard/server');
 
-function run(label, scriptArgs) {
-  const args = [...nodeFlags, ...scriptArgs];
-  const proc = spawn('node', args, { stdio: 'inherit', env: process.env });
-  proc.on('close', code => {
-    console.error(`[${label}] exited with code ${code} — restarting in 3s…`);
-    setTimeout(() => run(label, scriptArgs), 3000);
+// ── Bot child — auto-restart on crash ─────────────────────────────────────────
+function runBot() {
+  const bot = spawn(
+    'node',
+    ['--experimental-sqlite', path.join(__dirname, 'index.js')],
+    { stdio: 'inherit', env: process.env },
+  );
+  bot.on('close', code => {
+    console.error(`[Bot] exited with code ${code} — restarting in 3 s…`);
+    setTimeout(runBot, 3000);
   });
-  proc.on('error', err => console.error(`[${label}] error:`, err));
-  return proc;
+  bot.on('error', err => console.error('[Bot] spawn error:', err));
 }
 
-run('Bot',       ['index.js']);
-run('Dashboard', ['dashboard/server.js']);
+runBot();
