@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: discord-bot-2
+    runtime: node
+    buildCommand: npm install
+    startCommand: node start.js
+    envVars:
+      - key: NODE_OPTIONS
+        value: --experimental-sqlite
+      - key: BOT_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        sync: false
+      - key: CLIENT_SECRET
+        sync: false
+      - key: REDIRECT_URI
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: PORT
+        value: 3000
