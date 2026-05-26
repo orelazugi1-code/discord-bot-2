@@ -234,6 +234,11 @@ async function handleXp(message) {
   }
 }
 
+// ── Dashboard HTTP server ────────────────────────────────────────────────────
+// Runs in the same process so Render always detects an open port,
+// regardless of which entry-point command is used.
+require('./dashboard/server');
+
 // ── Login ─────────────────────────────────────────────────────────────────────
 
 const BOT_TOKEN = (process.env.BOT_TOKEN || '').trim();
