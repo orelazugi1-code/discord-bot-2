@@ -127,7 +127,7 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
-    if (interaction.isButton() || interaction.isRoleSelectMenu()) {
+    if (interaction.isButton() || interaction.isRoleSelectMenu() || interaction.isStringSelectMenu()) {
       const { handleButton } = require('./src/handlers/buttonHandler');
       await handleButton(interaction, db);
       return;

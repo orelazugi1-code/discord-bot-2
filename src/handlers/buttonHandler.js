@@ -20,37 +20,32 @@ async function handleButton(interaction, db) {
   // ── Ticket buttons ──────────────────────────────────────────────────────────
   if (ns === 'ticket') {
     if (parts[1] === 'open') {
-      let qs = [];
-      try { qs = db.getTicketQuestions(interaction.guildId); } catch (err) { console.error('[ticket:open] getTicketQuestions error:', err.message); }
-      const modal = new ModalBuilder()
-        .setCustomId('ticket:create')
-        .setTitle('Open a Support Ticket');
-      if (qs.length === 0) {
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('subject').setLabel('Subject')
-              .setStyle(TextInputStyle.Short).setPlaceholder('Brief description').setRequired(true).setMaxLength(100),
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('description').setLabel('Description')
-              .setStyle(TextInputStyle.Paragraph).setPlaceholder('Describe your issue in detail…').setRequired(true).setMaxLength(1000),
-          ),
-        );
-      } else {
-        for (const q of qs.slice(0, 5)) {
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('q_' + q.id)
-                .setLabel(q.question.substring(0, 45))
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMaxLength(500),
-            ),
-          );
-        }
+      // Check for ticket categories first
+      let categories = [];
+      try { categories = db.getTicketCategories(interaction.guildId); } catch {}
+
+      if (categories.length > 0) {
+        const select = new StringSelectMenuBuilder()
+          .setCustomId('ticket:category_select')
+          .setPlaceholder('Choose a ticket type…')
+          .setMinValues(1).setMaxValues(1)
+          .addOptions(categories.map(cat =>
+            new StringSelectMenuOptionBuilder()
+              .setLabel(cat.name.substring(0, 100))
+              .setValue(String(cat.id))
+              .setEmoji('🎫'),
+          ));
+        return interaction.reply({
+          content: '📋 **Select a ticket type:**',
+          components: [new ActionRowBuilder().addComponents(select)],
+          ephemeral: true,
+        });
       }
-      return interaction.showModal(modal);
+
+      // No categories — show modal with global questions
+      let qs = [];
+      try { qs = db.getTicketQuestions(interaction.guildId); } catch (err) { console.error('[ticket:open] error:', err.message); }
+      return interaction.showModal(buildTicketModal('ticket:create', qs));
     }
     if (parts[1] === 'close') {
       const ticket = db.getTicketByChannel(interaction.channel.id);
@@ -279,10 +274,11 @@ async function completeTicketSetup(interaction, session, roleIds, db) {
 
   const key = `${guildId}:${interaction.user.id}`;
   sessions.set(key, {
-    type:      'ticket_questions',
+    type:       'ticket_questions',
     guildId,
-    questions: [],
-    expiresAt: Date.now() + 10 * 60_000,
+    questions:  [],
+    categories: [],
+    expiresAt:  Date.now() + 30 * 60_000,
   });
 
   await interaction.editReply({
@@ -290,20 +286,24 @@ async function completeTicketSetup(interaction, session, roleIds, db) {
       `✅ **Ticket panel created** in ${channel}!\n` +
       `Support roles: ${roleList}\n` +
       `Max tickets per user: **${maxTickets}**\n\n` +
-      `📝 **Customize ticket questions** _(optional)_\n` +
-      `When users open a ticket they will fill in these questions.\n` +
-      `Questions can be in any language. Default if skipped: Subject + Description.`,
+      `📋 **Configure ticket questions** _(optional)_\n` +
+      `• **Add Categories** — users pick a ticket type, each with its own questions\n` +
+      `• **Custom Questions** — one set of questions for all tickets\n` +
+      `• **Use Defaults** — simple Subject + Description form`,
     components: [new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`tq_add:${key}`)
-        .setLabel('➕ Add Question 1')
+        .setCustomId(`tc_add:${key}`)
+        .setLabel('📂 Add Categories')
         .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`tq_add:${key}`)
+        .setLabel('📝 Custom Questions')
+        .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`tq_done:${key}`)
         .setLabel('✅ Use Defaults')
         .setStyle(ButtonStyle.Secondary),
-    )],
-  });
+    )],  });
 }
 
 // ── Complete button-panel setup ───────────────────────────────────────────────
@@ -479,4 +479,141 @@ async function handleTicketQuestionBtn(interaction, db, sessions) {
   }
 }
 
-module.exports = { handleButton, handleFormSubmit, handleTicketQuestionBtn };
+
+// ── Build ticket modal ─────────────────────────────────────────────────────────
+
+function buildTicketModal(customId, qs) {
+  const modal = new ModalBuilder().setCustomId(customId).setTitle('Open a Support Ticket');
+  if (qs.length === 0) {
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('subject').setLabel('Subject')
+          .setStyle(TextInputStyle.Short).setPlaceholder('Brief description').setRequired(true).setMaxLength(100),
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('description').setLabel('Description')
+          .setStyle(TextInputStyle.Paragraph).setPlaceholder('Describe your issue in detail…').setRequired(true).setMaxLength(1000),
+      ),
+    );
+  } else {
+    for (const q of qs.slice(0, 5)) {
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('q_' + q.id)
+            .setLabel(q.question.substring(0, 45))
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(500),
+        ),
+      );
+    }
+  }
+  return modal;
+}
+
+// ── String select menu handler ────────────────────────────────────────────────
+
+async function handleSelectMenu(interaction, db) {
+  if (interaction.customId === 'ticket:category_select') {
+    const categoryId = parseInt(interaction.values[0]);
+    let qs = [];
+    try { qs = db.getCategoryQuestions(categoryId); } catch {}
+    return interaction.showModal(buildTicketModal(`ticket:create:${categoryId}`, qs));
+  }
+}
+
+// ── Ticket category-setup button handlers ─────────────────────────────────────
+
+async function handleTicketCategoryBtn(interaction, db, sessions) {
+  const parts = interaction.customId.split(':');
+  const ns  = parts[0];
+  const key = `${parts[1]}:${parts[2]}`;
+
+  const session = sessions.get(key);
+  if (!session || Date.now() > session.expiresAt) {
+    return interaction.reply({ content: '⏱️ Session expired. Run /ticket-setup again.', ephemeral: true });
+  }
+
+  if (ns === 'tc_add') {
+    const catNum = (session.categories?.length ?? 0) + 1;
+    const modal = new ModalBuilder()
+      .setCustomId(`tc_modal:${key}`)
+      .setTitle(`Add Ticket Category ${catNum}`);
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('category_name')
+          .setLabel(`Category ${catNum} Name`)
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('e.g. 🚨 Report a User  •  🐛 Report a Bug  •  ❓ General Question')
+          .setRequired(true)
+          .setMaxLength(45),
+      ),
+    );
+    return interaction.showModal(modal);
+  }
+
+  if (ns === 'tc_q_add') {
+    const cats = session.categories || [];
+    const currentCat = cats[cats.length - 1];
+    if (!currentCat) return interaction.reply({ content: '❌ No active category. Add a category first.', ephemeral: true });
+    const qNum = (currentCat.questions?.length ?? 0) + 1;
+    const modal = new ModalBuilder()
+      .setCustomId(`tc_q_modal:${key}`)
+      .setTitle(`"${currentCat.name.substring(0, 35)}" — Question ${qNum}`);
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('question_text')
+          .setLabel(`Question ${qNum}`)
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('e.g. What is your username? / מה שם המשתמש שלך?')
+          .setRequired(true)
+          .setMaxLength(100),
+      ),
+    );
+    return interaction.showModal(modal);
+  }
+
+  if (ns === 'tc_q_done') {
+    const cats = session.categories || [];
+    const catList = cats.map((c, i) => {
+      const n = c.questions.length;
+      return `**${i + 1}.** ${c.name} — ${n} question${n !== 1 ? 's' : ''}`;
+    }).join('\n');
+    const atMax = cats.length >= 25;
+    const next  = cats.length + 1;
+    const row   = new ActionRowBuilder().addComponents(
+      ...(atMax ? [] : [
+        new ButtonBuilder().setCustomId(`tc_add:${key}`).setLabel(`➕ Add Category ${next}`).setStyle(ButtonStyle.Primary),
+      ]),
+      new ButtonBuilder().setCustomId(`tc_done:${key}`).setLabel('✅ Save & Done').setStyle(ButtonStyle.Success),
+    );
+    return interaction.update({
+      content: `📂 **Ticket categories configured:**\n${catList}\n\n_Add more categories or save._`,
+      components: [row],
+    });
+  }
+
+  if (ns === 'tc_done') {
+    const cats = session.categories || [];
+    try { db.clearTicketCategories(session.guildId); } catch {}
+    if (cats.length > 0) {
+      try { db.setTicketQuestions(session.guildId, []); } catch {}
+      for (let i = 0; i < cats.length; i++) {
+        const catId = db.createTicketCategory(session.guildId, cats[i].name, i);
+        if (cats[i].questions.length > 0) db.setCategoryQuestions(session.guildId, catId, cats[i].questions);
+      }
+    }
+    sessions.delete(key);
+    const catList = cats.map((c, i) => `**${i + 1}.** ${c.name}`).join('\n') || '_None_';
+    return interaction.update({
+      content: cats.length > 0
+        ? `✅ **Ticket setup complete!** Saved **${cats.length}** categor${cats.length !== 1 ? 'ies' : 'y'}:\n${catList}\n\nUsers will see a category selection menu when opening a ticket.`
+        : `✅ **Ticket setup complete!** No categories saved. Using default form.`,
+      components: [],
+    });
+  }
+}
+module.exports = { handleButton, handleFormSubmit, handleTicketQuestionBtn, handleTicketCategoryBtn };

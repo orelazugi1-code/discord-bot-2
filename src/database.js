@@ -1,4 +1,4 @@
-﻿require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
@@ -165,9 +165,17 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS ticket_questions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id    TEXT NOT NULL,
+    question    TEXT NOT NULL,
+    position    INTEGER DEFAULT 0,
+    category_id INTEGER DEFAULT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS ticket_categories (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,
     guild_id TEXT NOT NULL,
-    question TEXT NOT NULL,
+    name     TEXT NOT NULL,
     position INTEGER DEFAULT 0
   );
 
@@ -285,7 +293,7 @@ const stmts = {
 
   setXpDirect:           db.prepare('INSERT OR REPLACE INTO levels (guild_id, user_id, xp, level) VALUES (?, ?, ?, ?)'),
 
-  getTicketQuestions:    db.prepare('SELECT * FROM ticket_questions WHERE guild_id = ? ORDER BY position ASC'),
+  getTicketQuestions:    db.prepare('SELECT * FROM ticket_questions WHERE guild_id = ? AND category_id IS NULL ORDER BY position ASC'),
   clearTicketQuestions:  db.prepare('DELETE FROM ticket_questions WHERE guild_id = ?'),
   insertTicketQuestion:  db.prepare('INSERT INTO ticket_questions (guild_id, question, position) VALUES (?, ?, ?)'),
 
@@ -293,6 +301,15 @@ const stmts = {
   upsertSetupSession:    db.prepare('INSERT OR REPLACE INTO setup_sessions (key, data, expires_at) VALUES (?, ?, ?)'),
   deleteSetupSession:    db.prepare('DELETE FROM setup_sessions WHERE key = ?'),
   purgeSetupSessions:    db.prepare('DELETE FROM setup_sessions WHERE expires_at < ?'),
+
+  getTicketCategories:       db.prepare('SELECT * FROM ticket_categories WHERE guild_id = ? ORDER BY position ASC'),
+  createTicketCategoryStmt:  db.prepare('INSERT INTO ticket_categories (guild_id, name, position) VALUES (?, ?, ?)'),
+  clearTicketCategoriesStmt: db.prepare('DELETE FROM ticket_categories WHERE guild_id = ?'),
+  getCategoryQuestions:      db.prepare('SELECT * FROM ticket_questions WHERE category_id = ? ORDER BY position ASC'),
+  deleteCategoryQuestions:   db.prepare('DELETE FROM ticket_questions WHERE category_id = ?'),
+  insertCategoryQuestion:    db.prepare('INSERT INTO ticket_questions (guild_id, question, position, category_id) VALUES (?, ?, ?, ?)'),
+  clearGlobalTicketQs:       db.prepare('DELETE FROM ticket_questions WHERE guild_id = ? AND category_id IS NULL'),
+  clearAllCategoryQs:        db.prepare('DELETE FROM ticket_questions WHERE guild_id = ? AND category_id IS NOT NULL'),
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -450,7 +467,7 @@ module.exports = {
 
   getTicketQuestions:   guildId => stmts.getTicketQuestions.all(guildId),
   setTicketQuestions:   (guildId, questions) => {
-    stmts.clearTicketQuestions.run(guildId);
+    stmts.clearGlobalTicketQs.run(guildId);
     questions.forEach((q, i) => stmts.insertTicketQuestion.run(guildId, q, i));
   },
   clearTicketQuestions: guildId => stmts.clearTicketQuestions.run(guildId),
@@ -459,4 +476,19 @@ module.exports = {
   upsertSetupSession:    (key, data, expiresAt) => stmts.upsertSetupSession.run(key, data, expiresAt),
   deleteSetupSession:    key => stmts.deleteSetupSession.run(key),
   purgeExpiredSetupSessions: () => stmts.purgeSetupSessions.run(Date.now()),
+
+  getTicketCategories:  guildId => stmts.getTicketCategories.all(guildId),
+  createTicketCategory: (guildId, name, position) => {
+    const r = stmts.createTicketCategoryStmt.run(guildId, name, position);
+    return Number(r.lastInsertRowid);
+  },
+  clearTicketCategories: guildId => {
+    stmts.clearAllCategoryQs.run(guildId);
+    stmts.clearTicketCategoriesStmt.run(guildId);
+  },
+  getCategoryQuestions:  categoryId => stmts.getCategoryQuestions.all(categoryId),
+  setCategoryQuestions:  (guildId, categoryId, questions) => {
+    stmts.deleteCategoryQuestions.run(categoryId);
+    questions.forEach((q, i) => stmts.insertCategoryQuestion.run(guildId, q, i, categoryId));
+  },
 };

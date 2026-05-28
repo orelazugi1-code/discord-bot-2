@@ -1,4 +1,4 @@
-﻿const {
+const {
   PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType,
 } = require('discord.js');
 const sessions = require('../utils/setupSessions');
@@ -40,6 +40,88 @@ async function handleModal(interaction, db) {
         `📝 **Ticket questions so far:**\n${qList}\n\n` +
         (atMax ? '_Maximum 5 questions (Discord modal limit)_' : `_You can add ${5 - session.questions.length} more_`),
       components: [btns],
+
+  // ── Ticket category name modal ────────────────────────────────────────────
+  if (interaction.customId.startsWith('tc_modal:')) {
+    const parts   = interaction.customId.split(':');
+    const key     = `${parts[1]}:${parts[2]}`;
+    const session = sessions.get(key);
+    if (!session || Date.now() > session.expiresAt) {
+      return interaction.reply({ content: '⏱️ Session expired. Run /ticket-setup again.', ephemeral: true });
+    }
+    if (!session.categories) session.categories = [];
+    const name = interaction.fields.getTextInputValue('category_name').trim();
+    session.categories.push({ name, questions: [] });
+    session.expiresAt = Date.now() + 30 * 60_000;
+    sessions.set(key, session);
+
+    const catList = session.categories.map((c, i) => `**${i + 1}.** ${c.name}`).join('\n');
+    const atMax   = session.categories.length >= 25;
+    const next    = session.categories.length + 1;
+
+    const catRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`tc_q_add:${key}`)
+        .setLabel(`📝 Add Questions to "${name.substring(0, 20)}"`)
+        .setStyle(ButtonStyle.Secondary),
+      ...(atMax ? [] : [
+        new ButtonBuilder()
+          .setCustomId(`tc_add:${key}`)
+          .setLabel(`➕ Add Category ${next}`)
+          .setStyle(ButtonStyle.Primary),
+      ]),
+      new ButtonBuilder()
+        .setCustomId(`tc_done:${key}`)
+        .setLabel('✅ Save & Done')
+        .setStyle(ButtonStyle.Success),
+    );
+    return interaction.reply({
+      content: `📂 **Categories so far:**\n${catList}\n\n_You can add questions to "${name}" or keep adding categories._`,
+      components: [catRow],
+      ephemeral: true,
+    });
+  }
+
+  // ── Ticket category question modal ────────────────────────────────────────
+  if (interaction.customId.startsWith('tc_q_modal:')) {
+    const parts   = interaction.customId.split(':');
+    const key     = `${parts[1]}:${parts[2]}`;
+    const session = sessions.get(key);
+    if (!session || Date.now() > session.expiresAt) {
+      return interaction.reply({ content: '⏱️ Session expired. Run /ticket-setup again.', ephemeral: true });
+    }
+    const cats       = session.categories || [];
+    const currentCat = cats[cats.length - 1];
+    if (!currentCat) return interaction.reply({ content: '❌ No active category.', ephemeral: true });
+    if (!currentCat.questions) currentCat.questions = [];
+    currentCat.questions.push(interaction.fields.getTextInputValue('question_text').trim());
+    session.expiresAt = Date.now() + 30 * 60_000;
+    sessions.set(key, session);
+
+    const qList = currentCat.questions.map((q, i) => `**${i + 1}.** ${q}`).join('\n');
+    const atMax = currentCat.questions.length >= 5;
+    const next  = currentCat.questions.length + 1;
+
+    const qRow = new ActionRowBuilder().addComponents(
+      ...(atMax ? [] : [
+        new ButtonBuilder()
+          .setCustomId(`tc_q_add:${key}`)
+          .setLabel(`➕ Add Question ${next}`)
+          .setStyle(ButtonStyle.Primary),
+      ]),
+      new ButtonBuilder()
+        .setCustomId(`tc_q_done:${key}`)
+        .setLabel('✅ Done with Questions')
+        .setStyle(ButtonStyle.Success),
+    );
+    return interaction.reply({
+      content:
+        `📝 **Questions for "${currentCat.name}":**\n${qList}\n\n` +
+        (atMax ? '_Maximum 5 questions_' : `_You can add ${5 - currentCat.questions.length} more_`),
+      components: [qRow],
+      ephemeral: true,
+    });
+  }
       ephemeral: true,
     });
   }
@@ -83,13 +165,32 @@ async function handleModal(interaction, db) {
   }
 
   // ── Ticket creation ───────────────────────────────────────────────────────
-  if (interaction.customId !== 'ticket:create') return;
+  if (!interaction.customId.startsWith('ticket:create')) return;
 
   await interaction.deferReply({ ephemeral: true });
 
   const { guild, user } = interaction;
 
-  const questionsConfig = db.getTicketQuestions(guild.id);
+  // Support 'ticket:create' (global) and 'ticket:create:{categoryId}' (category)
+  const cidParts   = interaction.customId.split(':');
+  const categoryId = cidParts[2] ? parseInt(cidParts[2]) : null;
+
+  let questionsConfig = [];
+  try {
+    questionsConfig = categoryId
+      ? db.getCategoryQuestions(categoryId)
+      : db.getTicketQuestions(guild.id);
+  } catch {}
+
+  let categoryName = null;
+  if (categoryId) {
+    try {
+      const cats = db.getTicketCategories(guild.id);
+      const cat  = cats.find(c => c.id === categoryId);
+      if (cat) categoryName = cat.name;
+    } catch {}
+  }
+
   let subject, description;
   if (questionsConfig.length === 0) {
     subject     = interaction.fields.getTextInputValue('subject');
@@ -102,7 +203,6 @@ async function handleModal(interaction, db) {
     subject     = answers[0]?.answer || 'Support Request';
     description = answers.map(a => `**${a.question}**\n${a.answer}`).join('\n\n');
   }
-
   const config = db.getGuildConfig(guild.id);
 
   const open = db.getOpenTicketsByUser(guild.id, user.id);
@@ -149,6 +249,7 @@ async function handleModal(interaction, db) {
       .addFields(
         { name: 'Opened By', value: `<@${user.id}>`, inline: true },
         { name: 'Status',    value: '🟢 Open',       inline: true },
+        ...(categoryName ? [{ name: 'Type', value: categoryName, inline: true }] : []),
       )
       .setTimestamp()
       .setFooter({ text: `User ID: ${user.id}` });
