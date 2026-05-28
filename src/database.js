@@ -212,6 +212,7 @@ db.exec(`
   `ALTER TABLE guild_config ADD COLUMN xp_enabled INTEGER DEFAULT 1`,
   `ALTER TABLE guild_config ADD COLUMN levelup_channel_id TEXT`,
   `ALTER TABLE guild_config ADD COLUMN extra_support_roles TEXT`,
+  `ALTER TABLE ticket_questions ADD COLUMN category_id INTEGER DEFAULT NULL`,
 ].forEach(sql => { try { db.exec(sql); } catch {} });
 
 // ── Prepared statements ───────────────────────────────────────────────────────

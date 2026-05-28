@@ -40,6 +40,9 @@ async function handleModal(interaction, db) {
         `📝 **Ticket questions so far:**\n${qList}\n\n` +
         (atMax ? '_Maximum 5 questions (Discord modal limit)_' : `_You can add ${5 - session.questions.length} more_`),
       components: [btns],
+      ephemeral: true,
+    });
+  }
 
   // ── Ticket category name modal ────────────────────────────────────────────
   if (interaction.customId.startsWith('tc_modal:')) {
@@ -122,10 +125,6 @@ async function handleModal(interaction, db) {
       ephemeral: true,
     });
   }
-      ephemeral: true,
-    });
-  }
-
   // ── Form submission ───────────────────────────────────────────────────────
   // customId: fsubmit:<type>:<formId>
   //   type: 'modal' (mode 1) | 'yes' (mode 2, Yes path)
