@@ -20,17 +20,35 @@ async function handleButton(interaction, db) {
   // ── Ticket buttons ──────────────────────────────────────────────────────────
   if (ns === 'ticket') {
     if (parts[1] === 'open') {
-      const modal = new ModalBuilder().setCustomId('ticket:create').setTitle('Open a Support Ticket');
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('subject').setLabel('Subject')
-            .setStyle(TextInputStyle.Short).setPlaceholder('Brief description').setRequired(true).setMaxLength(100),
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('description').setLabel('Description')
-            .setStyle(TextInputStyle.Paragraph).setPlaceholder('Describe your issue in detail…').setRequired(true).setMaxLength(1000),
-        ),
-      );
+      const qs    = db.getTicketQuestions(interaction.guildId);
+      const modal = new ModalBuilder()
+        .setCustomId('ticket:create')
+        .setTitle('Open a Support Ticket');
+      if (qs.length === 0) {
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('subject').setLabel('Subject')
+              .setStyle(TextInputStyle.Short).setPlaceholder('Brief description').setRequired(true).setMaxLength(100),
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('description').setLabel('Description')
+              .setStyle(TextInputStyle.Paragraph).setPlaceholder('Describe your issue in detail…').setRequired(true).setMaxLength(1000),
+          ),
+        );
+      } else {
+        for (const q of qs.slice(0, 5)) {
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('q_' + q.id)
+                .setLabel(q.question.substring(0, 45))
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMaxLength(500),
+            ),
+          );
+        }
+      }
       return interaction.showModal(modal);
     }
     if (parts[1] === 'close') {
@@ -66,6 +84,32 @@ async function handleButton(interaction, db) {
       await interaction.editReply('❌ Failed to update roles. Check bot permissions.');
     }
     return;
+  }
+
+  // ── Alien-attack role toggle ────────────────────────────────────────────
+  if (ns === 'alien_role') {
+    const roleId = parts[1];
+    await interaction.deferReply({ ephemeral: true });
+    const role = interaction.guild.roles.cache.get(roleId);
+    if (!role) return interaction.editReply('❌ Role no longer exists.');
+    try {
+      if (interaction.member.roles.cache.has(roleId)) {
+        await interaction.member.roles.remove(roleId);
+        await interaction.editReply(`👾 Removed **${role.name}** from your profile.`);
+      } else {
+        await interaction.member.roles.add(roleId);
+        await interaction.editReply(`🛸 You have been granted **${role.name}**!`);
+      }
+    } catch (err) {
+      console.error('Alien role error:', err);
+      await interaction.editReply('❌ Could not update your role. Check bot permissions.');
+    }
+    return;
+  }
+
+  // ── Ticket question-setup ─────────────────────────────────────────────────
+  if (ns === 'tq_add' || ns === 'tq_done') {
+    return handleTicketQuestionBtn(interaction, db, sessions);
   }
 
   // ── Staff approval buttons ──────────────────────────────────────────────────
@@ -232,12 +276,32 @@ async function completeTicketSetup(interaction, session, roleIds, db) {
     ? roleIds.map(id => `<@&${id}>`).join(', ')
     : '_None (anyone can create tickets)_';
 
+  const key = `${guildId}:${interaction.user.id}`;
+  sessions.set(key, {
+    type:      'ticket_questions',
+    guildId,
+    questions: [],
+    expiresAt: Date.now() + 10 * 60_000,
+  });
+
   await interaction.editReply({
     content:
       `✅ **Ticket panel created** in ${channel}!\n` +
       `Support roles: ${roleList}\n` +
-      `Max tickets per user: **${maxTickets}**`,
-    components: [],
+      `Max tickets per user: **${maxTickets}**\n\n` +
+      `📝 **Customize ticket questions** _(optional)_\n` +
+      `When users open a ticket they will fill in these questions.\n` +
+      `Questions can be in any language. Default if skipped: Subject + Description.`,
+    components: [new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`tq_add:${key}`)
+        .setLabel('➕ Add Question 1')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(`tq_done:${key}`)
+        .setLabel('✅ Use Defaults')
+        .setStyle(ButtonStyle.Secondary),
+    )],
   });
 }
 
@@ -365,4 +429,53 @@ async function handleFormSubmit(interaction, form, answers, responseType, db) {
   }
 }
 
-module.exports = { handleButton, handleFormSubmit };
+// ── Ticket question-setup button handlers ───────────────────────────────
+
+async function handleTicketQuestionBtn(interaction, db, sessions) {
+  const parts = interaction.customId.split(':');
+  const ns    = parts[0];
+  const key   = `${parts[1]}:${parts[2]}`;
+
+  if (ns === 'tq_add') {
+    const session = sessions.get(key);
+    if (!session || Date.now() > session.expiresAt) {
+      return interaction.reply({ content: '⏱️ Session expired. Run /ticket-setup again.', ephemeral: true });
+    }
+    const qNum = (session.questions?.length ?? 0) + 1;
+    const modal = new ModalBuilder()
+      .setCustomId(`tq_modal:${key}`)
+      .setTitle(`Add Ticket Question ${qNum}`);
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('question_text')
+          .setLabel(`Question ${qNum}`)
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('e.g.  What is your issue? / מה הבעיה שלך?')
+          .setRequired(true)
+          .setMaxLength(100),
+      ),
+    );
+    return interaction.showModal(modal);
+  }
+
+  if (ns === 'tq_done') {
+    const session = sessions.get(key);
+    if (!session || Date.now() > session.expiresAt) {
+      return interaction.reply({ content: '⏱️ Session expired.', ephemeral: true });
+    }
+    const questions = session.questions ?? [];
+    sessions.delete(key);
+    db.setTicketQuestions(session.guildId, questions);
+    await interaction.update({
+      content: questions.length > 0
+        ? `✅ **Ticket setup complete!** Saved **${questions.length}** custom question(s):\n` +
+          questions.map((q, i) => `**${i + 1}.** ${q}`).join('\n')
+        : '✅ **Ticket setup complete!** Using default questions (Subject + Description).',
+      components: [],
+    });
+    return;
+  }
+}
+
+module.exports = { handleButton, handleFormSubmit, handleTicketQuestionBtn };

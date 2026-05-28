@@ -163,6 +163,13 @@ db.exec(`
     role_id  TEXT NOT NULL,
     trigger  TEXT NOT NULL DEFAULT 'submit'
   );
+
+  CREATE TABLE IF NOT EXISTS ticket_questions (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    question TEXT NOT NULL,
+    position INTEGER DEFAULT 0
+  );
 `);
 
 // ── Migrations ────────────────────────────────────────────────────────────────
@@ -425,4 +432,11 @@ module.exports = {
   addTempRole:         (guildId, userId, roleId, expiresAt) => stmts.addTempRole.run(guildId, userId, roleId, expiresAt),
   getExpiredTempRoles: () => stmts.getExpiredTempRoles.all(),
   deleteTempRole:      id => stmts.deleteTempRole.run(id),
+
+  getTicketQuestions:   guildId => stmts.getTicketQuestions.all(guildId),
+  setTicketQuestions:   (guildId, questions) => {
+    stmts.clearTicketQuestions.run(guildId);
+    questions.forEach((q, i) => stmts.insertTicketQuestion.run(guildId, q, i));
+  },
+  clearTicketQuestions: guildId => stmts.clearTicketQuestions.run(guildId),
 };

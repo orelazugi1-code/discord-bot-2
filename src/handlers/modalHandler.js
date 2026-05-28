@@ -1,8 +1,47 @@
 ﻿const {
   PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType,
 } = require('discord.js');
+const sessions = require('../utils/setupSessions');
 
 async function handleModal(interaction, db) {
+
+  // ── Ticket question modal ─────────────────────────────────────────────────
+  if (interaction.customId.startsWith('tq_modal:')) {
+    const parts   = interaction.customId.split(':');
+    const key     = `${parts[1]}:${parts[2]}`;
+    const session = sessions.get(key);
+    if (!session || Date.now() > session.expiresAt) {
+      return interaction.reply({ content: '⏱️ Session expired. Run /ticket-setup again.', ephemeral: true });
+    }
+    if (!session.questions) session.questions = [];
+    session.questions.push(interaction.fields.getTextInputValue('question_text').trim());
+    session.expiresAt = Date.now() + 10 * 60_000;
+
+    const qList = session.questions.map((q, i) => `**${i + 1}.** ${q}`).join('\n');
+    const atMax = session.questions.length >= 5;
+    const next  = session.questions.length + 1;
+
+    const btns = new ActionRowBuilder().addComponents(
+      ...(atMax ? [] : [
+        new ButtonBuilder()
+          .setCustomId(`tq_add:${key}`)
+          .setLabel(`➕ Add Question ${next}`)
+          .setStyle(ButtonStyle.Primary),
+      ]),
+      new ButtonBuilder()
+        .setCustomId(`tq_done:${key}`)
+        .setLabel('✅ Done')
+        .setStyle(ButtonStyle.Success),
+    );
+
+    return interaction.reply({
+      content:
+        `📝 **Ticket questions so far:**\n${qList}\n\n` +
+        (atMax ? '_Maximum 5 questions (Discord modal limit)_' : `_You can add ${5 - session.questions.length} more_`),
+      components: [btns],
+      ephemeral: true,
+    });
+  }
 
   // ── Form submission ───────────────────────────────────────────────────────
   // customId: fsubmit:<type>:<formId>
@@ -47,9 +86,21 @@ async function handleModal(interaction, db) {
 
   await interaction.deferReply({ ephemeral: true });
 
-  const subject     = interaction.fields.getTextInputValue('subject');
-  const description = interaction.fields.getTextInputValue('description');
   const { guild, user } = interaction;
+
+  const questionsConfig = db.getTicketQuestions(guild.id);
+  let subject, description;
+  if (questionsConfig.length === 0) {
+    subject     = interaction.fields.getTextInputValue('subject');
+    description = interaction.fields.getTextInputValue('description');
+  } else {
+    const answers = questionsConfig.slice(0, 5).map(q => ({
+      question: q.question,
+      answer:   interaction.fields.getTextInputValue('q_' + q.id),
+    }));
+    subject     = answers[0]?.answer || 'Support Request';
+    description = answers.map(a => `**${a.question}**\n${a.answer}`).join('\n\n');
+  }
 
   const config = db.getGuildConfig(guild.id);
 
