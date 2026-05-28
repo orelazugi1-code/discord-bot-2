@@ -110,11 +110,21 @@ client.on(Events.GuildMemberRemove, async member => {
   if (!config.goodbye_enabled || !config.goodbye_channel_id) return;
   const ch = member.guild.channels.cache.get(config.goodbye_channel_id);
   if (!ch) return;
-  const msg = (config.goodbye_message || 'Goodbye {user}, we will miss you!')
-    .replace('{user}',     member.user.username)
-    .replace('{username}', member.user.username)
-    .replace('{server}',   member.guild.name);
-  await ch.send(msg).catch(console.error);
+  try {
+    const { generateGoodbyeCard } = require('./src/utils/welcomeCard');
+    const cardBuf = await generateGoodbyeCard(member, config);
+    await ch.send({
+      content: `Goodbye ! 👋`,
+      files: [{ attachment: cardBuf, name: 'goodbye.png' }],
+    });
+  } catch (err) {
+    console.error('[GoodbyeCard] Error generating card:', err.message);
+    const msg = (config.goodbye_message || 'Goodbye {user}, we will miss you!')
+      .replace('{user}',     member.user.username)
+      .replace('{username}', member.user.username)
+      .replace('{server}',   member.guild.name);
+    await ch.send(msg).catch(console.error);
+  }
 });
 
 // ── Interactions ──────────────────────────────────────────────────────────────
