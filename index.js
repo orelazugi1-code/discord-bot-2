@@ -1,9 +1,10 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, Events, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Events, REST, Routes, PermissionFlagsBits } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
 const db   = require('./src/database');
 const { calculateLevel } = require('./src/utils/levels');
+const { checkAndSendUpdate } = require('./src/utils/botUpdates');
 
 const client = new Client({
   intents: [
@@ -66,6 +67,9 @@ client.once(Events.ClientReady, async c => {
       db.deleteTempRole(tr.id);
     }
   }, 3_600_000);
+
+  // Bot updates channel
+  await checkAndSendUpdate(client, db).catch(err => console.error('[BotUpdates]', err.message));
 });
 
 // ── Welcome card on member join ───────────────────────────────────────────────
@@ -167,7 +171,7 @@ client.on(Events.MessageCreate, async message => {
   }
 
   const automod = db.getAutomodConfig(message.guild.id);
-  if (automod.anti_spam_enabled || automod.link_filter_enabled ||
+  if (automod.anti_spam_enabled || automod.link_filter_enabled || automod.anti_invite_enabled ||
       automod.mention_filter_enabled || automod.bad_words.length) {
     const deleted = await runAutomod(message, automod);
     if (deleted) return;
@@ -205,6 +209,15 @@ async function runAutomod(message, cfg) {
     const lower = content.toLowerCase();
     const hit   = cfg.bad_words.find(w => lower.includes(w));
     if (hit) return warnAndDelete(message, '🚫 Your message contained a prohibited word.');
+  }
+  if (cfg.anti_invite_enabled) {
+    const inviteRx = /(?:https?:\/\/)?(?:www\.)?discord(?:\.gg|(?:app)?\.com\/invite)\/[a-zA-Z0-9-]+/i;
+    if (inviteRx.test(content)) {
+      if (!message.member.permissions.has(PermissionFlagsBits.ManageMessages) &&
+          !message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return warnAndDelete(message, '🚫 הזמנות לשרתים אחרים אינן מותרות כאן!');
+      }
+    }
   }
   return false;
 }

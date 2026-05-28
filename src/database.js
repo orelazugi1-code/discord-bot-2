@@ -213,6 +213,8 @@ db.exec(`
   `ALTER TABLE guild_config ADD COLUMN levelup_channel_id TEXT`,
   `ALTER TABLE guild_config ADD COLUMN extra_support_roles TEXT`,
   `ALTER TABLE ticket_questions ADD COLUMN category_id INTEGER DEFAULT NULL`,
+  `ALTER TABLE automod_config ADD COLUMN anti_invite_enabled INTEGER DEFAULT 0`,
+  `ALTER TABLE guild_config ADD COLUMN last_deploy_hash TEXT`,
 ].forEach(sql => { try { db.exec(sql); } catch {} });
 
 // ── Prepared statements ───────────────────────────────────────────────────────
