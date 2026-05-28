@@ -16,6 +16,7 @@ async function handleModal(interaction, db) {
     if (!session.questions) session.questions = [];
     session.questions.push(interaction.fields.getTextInputValue('question_text').trim());
     session.expiresAt = Date.now() + 10 * 60_000;
+    sessions.set(key, session);
 
     const qList = session.questions.map((q, i) => `**${i + 1}.** ${q}`).join('\n');
     const atMax = session.questions.length >= 5;

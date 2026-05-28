@@ -170,6 +170,12 @@ db.exec(`
     question TEXT NOT NULL,
     position INTEGER DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS setup_sessions (
+    key        TEXT PRIMARY KEY,
+    data       TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
 `);
 
 // ── Migrations ────────────────────────────────────────────────────────────────
@@ -278,6 +284,15 @@ const stmts = {
   deleteTempRole:        db.prepare('DELETE FROM temp_roles WHERE id = ?'),
 
   setXpDirect:           db.prepare('INSERT OR REPLACE INTO levels (guild_id, user_id, xp, level) VALUES (?, ?, ?, ?)'),
+
+  getTicketQuestions:    db.prepare('SELECT * FROM ticket_questions WHERE guild_id = ? ORDER BY position ASC'),
+  clearTicketQuestions:  db.prepare('DELETE FROM ticket_questions WHERE guild_id = ?'),
+  insertTicketQuestion:  db.prepare('INSERT INTO ticket_questions (guild_id, question, position) VALUES (?, ?, ?)'),
+
+  getSetupSession:       db.prepare('SELECT * FROM setup_sessions WHERE key = ?'),
+  upsertSetupSession:    db.prepare('INSERT OR REPLACE INTO setup_sessions (key, data, expires_at) VALUES (?, ?, ?)'),
+  deleteSetupSession:    db.prepare('DELETE FROM setup_sessions WHERE key = ?'),
+  purgeSetupSessions:    db.prepare('DELETE FROM setup_sessions WHERE expires_at < ?'),
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -439,4 +454,9 @@ module.exports = {
     questions.forEach((q, i) => stmts.insertTicketQuestion.run(guildId, q, i));
   },
   clearTicketQuestions: guildId => stmts.clearTicketQuestions.run(guildId),
+
+  getSetupSession:       key => stmts.getSetupSession.get(key),
+  upsertSetupSession:    (key, data, expiresAt) => stmts.upsertSetupSession.run(key, data, expiresAt),
+  deleteSetupSession:    key => stmts.deleteSetupSession.run(key),
+  purgeExpiredSetupSessions: () => stmts.purgeSetupSessions.run(Date.now()),
 };

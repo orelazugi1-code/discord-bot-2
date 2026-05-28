@@ -20,7 +20,8 @@ async function handleButton(interaction, db) {
   // ── Ticket buttons ──────────────────────────────────────────────────────────
   if (ns === 'ticket') {
     if (parts[1] === 'open') {
-      const qs    = db.getTicketQuestions(interaction.guildId);
+      let qs = [];
+      try { qs = db.getTicketQuestions(interaction.guildId); } catch (err) { console.error('[ticket:open] getTicketQuestions error:', err.message); }
       const modal = new ModalBuilder()
         .setCustomId('ticket:create')
         .setTitle('Open a Support Ticket');
