@@ -1,6 +1,7 @@
 const {
   ModalBuilder, TextInputBuilder, TextInputStyle,
   ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle,
+  StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
   PermissionFlagsBits, ChannelType,
 } = require('discord.js');
 const { closeTicketChannel } = require('../utils/ticketManager');
@@ -12,6 +13,9 @@ async function handleButton(interaction, db) {
   // Role Select Menu interactions (ticket-setup / button-panel flows)
   if (interaction.isRoleSelectMenu()) {
     return handleSetupRoles(interaction, db);
+  }
+  if (interaction.isStringSelectMenu()) {
+    return handleSelectMenu(interaction, db);
   }
 
   const parts = interaction.customId.split(':');
@@ -106,6 +110,11 @@ async function handleButton(interaction, db) {
   // ── Ticket question-setup ─────────────────────────────────────────────────
   if (ns === 'tq_add' || ns === 'tq_done') {
     return handleTicketQuestionBtn(interaction, db, sessions);
+  }
+
+  // ── Ticket category-setup
+  if (ns === 'tc_add' || ns === 'tc_q_add' || ns === 'tc_q_done' || ns === 'tc_done') {
+    return handleTicketCategoryBtn(interaction, db, sessions);
   }
 
   // ── Staff approval buttons ──────────────────────────────────────────────────

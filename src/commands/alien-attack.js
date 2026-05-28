@@ -15,13 +15,13 @@ module.exports = {
       .addStringOption(o =>
         o.setName('title').setDescription('Panel title').setRequired(true))
       .addStringOption(o =>
-        o.setName('description').setDescription('Panel description / flavour text').setRequired(false))
-      .addStringOption(o =>
         o.setName('b1_label').setDescription('Button 1 label (assigns a role)').setRequired(true))
       .addRoleOption(o =>
         o.setName('b1_role').setDescription('Role to toggle via Button 1').setRequired(true))
       .addStringOption(o =>
         o.setName('b2_label').setDescription('Button 2 label (opens a ticket)').setRequired(true))
+      .addStringOption(o =>
+        o.setName('description').setDescription('Panel description / flavour text').setRequired(false))
       .addStringOption(o =>
         o.setName('b3_label').setDescription('Button 3 label (opens a form)').setRequired(false))
       .addIntegerOption(o =>
