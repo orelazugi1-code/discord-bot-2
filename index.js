@@ -24,8 +24,11 @@ client.once(Events.ClientReady, async c => {
   const rest = new REST().setToken((process.env.BOT_TOKEN || '').trim());
   const commands = client.commands.map(cmd => cmd.data.toJSON());
   try {
-    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
-    console.log(`✅ Registered ${commands.length} global slash commands`);
+    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: [] });
+    for (const [id] of c.guilds.cache) {
+      await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, id), { body: commands });
+    }
+    console.log(`✅ Registered ${commands.length} commands in ${c.guilds.cache.size} guilds`);
   } catch (err) {
     console.error('Failed to register commands:', err);
   }
