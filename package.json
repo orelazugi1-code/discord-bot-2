@@ -16,8 +16,5 @@
   },
   "engines": {
     "node": ">=22.5.0"
-  },
-  "optionalDependencies": {
-    "@napi-rs/canvas": "^1.0.0"
   }
 }
