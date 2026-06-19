@@ -3,7 +3,7 @@ const { t, get } = require('../i18n');
 const { fmtTime, rand, pick } = require('../utils');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('battle').setDescription('הילחם במפלצת'),
+  data: new SlashCommandBuilder().setName('battle').setDescription('הילחם במפלצת').setDescriptionLocalizations({ 'en-US': 'Fight a monster', 'en-GB': 'Fight a monster' }),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const c = db.getChar(interaction.user.id, interaction.guild.id);

@@ -3,8 +3,8 @@ const { t } = require('../i18n');
 const { rand } = require('../utils');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('dice').setDescription('הימור על קוביות')
-    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setRequired(true).setMinValue(10)),
+  data: new SlashCommandBuilder().setName('dice').setDescription('הימור על קוביות').setDescriptionLocalizations({ 'en-US': 'Bet on dice', 'en-GB': 'Bet on dice' })
+    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const bet = interaction.options.getInteger('bet');

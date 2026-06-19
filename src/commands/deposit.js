@@ -2,8 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('deposit').setDescription('הפקד מטבעות לבנק')
-    .addIntegerOption(o => o.setName('amount').setDescription('כמה (0 = הכל)').setRequired(true).setMinValue(0)),
+  data: new SlashCommandBuilder().setName('deposit').setDescription('הפקד מטבעות לבנק').setDescriptionLocalizations({ 'en-US': 'Deposit coins to bank', 'en-GB': 'Deposit coins to bank' })
+    .addIntegerOption(o => o.setName('amount').setDescription('כמה (0 = הכל)').setDescriptionLocalizations({ 'en-US': 'How much (0 = all)', 'en-GB': 'How much (0 = all)' }).setRequired(true).setMinValue(0)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const e = db.getEcon(interaction.user.id, interaction.guild.id);

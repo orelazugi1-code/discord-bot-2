@@ -9,9 +9,9 @@ const CLASSES = {
 };
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('create').setDescription('צור דמות RPG חדשה')
-    .addStringOption(o => o.setName('name').setDescription('שם הדמות').setRequired(true).setMaxLength(20))
-    .addStringOption(o => o.setName('class').setDescription('בחר מחלקה').setRequired(true)
+  data: new SlashCommandBuilder().setName('create').setDescription('צור דמות RPG חדשה').setDescriptionLocalizations({ 'en-US': 'Create a new RPG character', 'en-GB': 'Create a new RPG character' })
+    .addStringOption(o => o.setName('name').setDescription('שם הדמות').setDescriptionLocalizations({ 'en-US': 'Character name', 'en-GB': 'Character name' }).setRequired(true).setMaxLength(20))
+    .addStringOption(o => o.setName('class').setDescription('בחר מחלקה').setDescriptionLocalizations({ 'en-US': 'Choose a class', 'en-GB': 'Choose a class' }).setRequired(true)
       .addChoices(
         { name: '⚔️ לוחם / Warrior', value: 'warrior' },
         { name: '🧙 קוסם / Mage', value: 'mage' },

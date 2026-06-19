@@ -3,7 +3,7 @@ const { t } = require('../i18n');
 const { fmtTime } = require('../utils');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('daily').setDescription('אסוף מתנה יומית'),
+  data: new SlashCommandBuilder().setName('daily').setDescription('אסוף מתנה יומית').setDescriptionLocalizations({ 'en-US': 'Claim your daily reward', 'en-GB': 'Claim your daily reward' }),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const e = db.getEcon(interaction.user.id, interaction.guild.id);

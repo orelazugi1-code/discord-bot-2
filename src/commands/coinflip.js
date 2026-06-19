@@ -2,10 +2,10 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('coinflip').setDescription('הימור על הטלת מטבע')
-    .addStringOption(o => o.setName('side').setDescription('עץ או פלי').setRequired(true)
+  data: new SlashCommandBuilder().setName('coinflip').setDescription('הימור על הטלת מטבע').setDescriptionLocalizations({ 'en-US': 'Bet on a coin flip', 'en-GB': 'Bet on a coin flip' })
+    .addStringOption(o => o.setName('side').setDescription('עץ או פלי').setDescriptionLocalizations({ 'en-US': 'Heads or tails', 'en-GB': 'Heads or tails' }).setRequired(true)
       .addChoices({ name: 'עץ / Heads', value: 'heads' }, { name: 'פלי / Tails', value: 'tails' }))
-    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setRequired(true).setMinValue(10)),
+    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const bet = interaction.options.getInteger('bet');

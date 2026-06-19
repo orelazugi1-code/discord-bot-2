@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBui
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('top').setDescription('טבלת המובילים'),
+  data: new SlashCommandBuilder().setName('top').setDescription('טבלת המובילים').setDescriptionLocalizations({ 'en-US': 'Leaderboard', 'en-GB': 'Leaderboard' }),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const menu = new StringSelectMenuBuilder()

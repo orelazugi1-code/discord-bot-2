@@ -3,8 +3,8 @@ const { t } = require('../i18n');
 const CREATOR_ID = '1266854019767341107';
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('report').setDescription('שלח דיווח ליוצר הבוט')
-    .addStringOption(o => o.setName('text').setDescription('מה הבעיה?').setRequired(true)),
+  data: new SlashCommandBuilder().setName('report').setDescription('שלח דיווח ליוצר הבוט').setDescriptionLocalizations({ 'en-US': 'Send a report to the bot creator', 'en-GB': 'Send a report to the bot creator' })
+    .addStringOption(o => o.setName('text').setDescription('מה הבעיה?').setDescriptionLocalizations({ 'en-US': 'What is the issue?', 'en-GB': 'What is the issue?' }).setRequired(true)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const text = interaction.options.getString('text');

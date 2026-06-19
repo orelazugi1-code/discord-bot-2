@@ -10,7 +10,7 @@ const CATEGORIES = {
 };
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('help').setDescription('הצג את כל הפקודות'),
+  data: new SlashCommandBuilder().setName('help').setDescription('הצג את כל הפקודות').setDescriptionLocalizations({ 'en-US': 'Show all commands', 'en-GB': 'Show all commands' }),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const embed = new EmbedBuilder()

@@ -2,9 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('disc
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('take-coins').setDescription('קח מטבעות ממשתמש')
-    .addUserOption(o => o.setName('user').setDescription('ממי').setRequired(true))
-    .addIntegerOption(o => o.setName('amount').setDescription('כמה').setRequired(true).setMinValue(1))
+  data: new SlashCommandBuilder().setName('take-coins').setDescription('קח מטבעות ממשתמש').setDescriptionLocalizations({ 'en-US': 'Take coins from a user', 'en-GB': 'Take coins from a user' })
+    .addUserOption(o => o.setName('user').setDescription('ממי').setDescriptionLocalizations({ 'en-US': 'From who', 'en-GB': 'From who' }).setRequired(true))
+    .addIntegerOption(o => o.setName('amount').setDescription('כמה').setDescriptionLocalizations({ 'en-US': 'How much', 'en-GB': 'How much' }).setRequired(true).setMinValue(1))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);

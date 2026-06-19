@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('heal').setDescription('רפא את הדמות שלך'),
+  data: new SlashCommandBuilder().setName('heal').setDescription('רפא את הדמות שלך').setDescriptionLocalizations({ 'en-US': 'Heal your character', 'en-GB': 'Heal your character' }),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const c = db.getChar(interaction.user.id, interaction.guild.id);

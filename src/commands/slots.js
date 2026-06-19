@@ -4,8 +4,8 @@ const { t } = require('../i18n');
 const SYMBOLS = ['🍒', '🍋', '🍊', '🍇', '💎', '7️⃣'];
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('slots').setDescription('שחק במכונת מזל')
-    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setRequired(true).setMinValue(10)),
+  data: new SlashCommandBuilder().setName('slots').setDescription('שחק במכונת מזל').setDescriptionLocalizations({ 'en-US': 'Play the slot machine', 'en-GB': 'Play the slot machine' })
+    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const bet = interaction.options.getInteger('bet');

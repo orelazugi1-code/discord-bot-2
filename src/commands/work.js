@@ -3,7 +3,7 @@ const { t, get } = require('../i18n');
 const { fmtTime, rand, pick } = require('../utils');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('work').setDescription('עבוד והרווח מטבעות'),
+  data: new SlashCommandBuilder().setName('work').setDescription('עבוד והרווח מטבעות').setDescriptionLocalizations({ 'en-US': 'Work and earn coins', 'en-GB': 'Work and earn coins' }),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const e = db.getEcon(interaction.user.id, interaction.guild.id);

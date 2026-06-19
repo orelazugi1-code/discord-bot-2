@@ -5,7 +5,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('balance')
     .setDescription('בדוק את המטבעות שלך')
-    .addUserOption(o => o.setName('user').setDescription('משתמש אחר')),
+    .setDescriptionLocalizations({ 'en-US': 'Check your coins', 'en-GB': 'Check your coins' })
+    .addUserOption(o => o.setName('user').setDescription('משתמש אחר').setDescriptionLocalizations({ 'en-US': 'Another user', 'en-GB': 'Another user' })),
   async execute(interaction, db) {
     const target = interaction.options.getUser('user') || interaction.user;
     const lang = db.getLang(interaction.user.id);

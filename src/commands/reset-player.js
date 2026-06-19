@@ -2,8 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('disc
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('reset-player').setDescription('אפס את כל הנתונים של שחקן')
-    .addUserOption(o => o.setName('user').setDescription('מי לאפס').setRequired(true))
+  data: new SlashCommandBuilder().setName('reset-player').setDescription('אפס את כל הנתונים של שחקן').setDescriptionLocalizations({ 'en-US': 'Reset all player data', 'en-GB': 'Reset all player data' })
+    .addUserOption(o => o.setName('user').setDescription('מי לאפס').setDescriptionLocalizations({ 'en-US': 'Who to reset', 'en-GB': 'Who to reset' }).setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);

@@ -5,10 +5,10 @@ const BEATS = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
 const KEYS = { rock: 'rock', paper: 'paper', scissors: 'scissors' };
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('rps').setDescription('אבן נייר ומספריים')
-    .addStringOption(o => o.setName('choice').setDescription('מה תבחר').setRequired(true)
+  data: new SlashCommandBuilder().setName('rps').setDescription('אבן נייר ומספריים').setDescriptionLocalizations({ 'en-US': 'Rock paper scissors', 'en-GB': 'Rock paper scissors' })
+    .addStringOption(o => o.setName('choice').setDescription('מה תבחר').setDescriptionLocalizations({ 'en-US': 'Your choice', 'en-GB': 'Your choice' }).setRequired(true)
       .addChoices({ name: '🪨 אבן', value: 'rock' }, { name: '📄 נייר', value: 'paper' }, { name: '✂️ מספריים', value: 'scissors' }))
-    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setRequired(true).setMinValue(10)),
+    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const bet = interaction.options.getInteger('bet');

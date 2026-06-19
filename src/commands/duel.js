@@ -2,9 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('duel').setDescription('אתגר שחקן אחר לדו-קרב')
-    .addUserOption(o => o.setName('user').setDescription('מי לאתגר').setRequired(true))
-    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setRequired(true).setMinValue(10)),
+  data: new SlashCommandBuilder().setName('duel').setDescription('אתגר שחקן אחר לדו-קרב').setDescriptionLocalizations({ 'en-US': 'Challenge another player to a duel', 'en-GB': 'Challenge another player to a duel' })
+    .addUserOption(o => o.setName('user').setDescription('מי לאתגר').setDescriptionLocalizations({ 'en-US': 'Who to challenge', 'en-GB': 'Who to challenge' }).setRequired(true))
+    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const target = interaction.options.getUser('user');

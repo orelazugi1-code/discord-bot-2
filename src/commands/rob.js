@@ -3,8 +3,8 @@ const { t } = require('../i18n');
 const { fmtTime, rand } = require('../utils');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('rob').setDescription('שדוד משתמש אחר')
-    .addUserOption(o => o.setName('user').setDescription('מי לשדוד').setRequired(true)),
+  data: new SlashCommandBuilder().setName('rob').setDescription('שדוד משתמש אחר').setDescriptionLocalizations({ 'en-US': 'Rob another user', 'en-GB': 'Rob another user' })
+    .addUserOption(o => o.setName('user').setDescription('מי לשדוד').setDescriptionLocalizations({ 'en-US': 'Who to rob', 'en-GB': 'Who to rob' }).setRequired(true)),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const target = interaction.options.getUser('user');

@@ -2,8 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { t } = require('../i18n');
 
 module.exports = {
-  data: new SlashCommandBuilder().setName('profile').setDescription('צפה בדמות ה-RPG שלך')
-    .addUserOption(o => o.setName('user').setDescription('משתמש אחר')),
+  data: new SlashCommandBuilder().setName('profile').setDescription('צפה בדמות ה-RPG שלך').setDescriptionLocalizations({ 'en-US': 'View your RPG character', 'en-GB': 'View your RPG character' })
+    .addUserOption(o => o.setName('user').setDescription('משתמש אחר').setDescriptionLocalizations({ 'en-US': 'Another user', 'en-GB': 'Another user' })),
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const target = interaction.options.getUser('user') || interaction.user;
