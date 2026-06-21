@@ -9,6 +9,7 @@ module.exports = {
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const target = interaction.options.getUser('user');
+    if (target.bot) return interaction.reply({ content: '❌ אי אפשר לתת מטבעות לבוט!', ephemeral: true });
     const amount = interaction.options.getInteger('amount');
     db.addCoins(target.id, interaction.guild.id, amount);
     const embed = new EmbedBuilder().setColor(0x2ECC71)
