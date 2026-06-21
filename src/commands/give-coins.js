@@ -12,6 +12,7 @@ module.exports = {
     if (target.bot) return interaction.reply({ content: '❌ אי אפשר לתת מטבעות לבוט!', ephemeral: true });
     const amount = interaction.options.getInteger('amount');
     db.addCoins(target.id, interaction.guild.id, amount);
+    // Admin give creates coins from nothing - doesn't take from admin's wallet
     const embed = new EmbedBuilder().setColor(0x2ECC71)
       .setDescription(t(lang, 'admin_give', { amount, target: target.displayName }));
     await interaction.reply({ embeds: [embed] });

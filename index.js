@@ -28,6 +28,42 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isChatInputCommand()) {
       const cmd = client.commands.get(interaction.commandName);
       if (cmd) await cmd.execute(interaction, db);
+      return;
+    }
+
+    // Report feedback buttons
+    if (interaction.isButton() && interaction.customId === 'report_solved') {
+      await interaction.update({ content: '✅ שמחים לשמוע שהבעיה נפתרה! תודה שדיווחת 💪', embeds: interaction.message.embeds, components: [] });
+      try {
+        const creator = await interaction.client.users.fetch('1266854019767341107');
+        await creator.send(`✅ **${interaction.user.tag}** דיווח שהבעיה **נפתרה** בהצלחה! (Victor)`);
+        const logCh = await interaction.client.channels.fetch('1518219986198331422').catch(() => null);
+        if (logCh) await logCh.send(`✅ **${interaction.user.tag}** — בעיה נפתרה`);
+      } catch {}
+      return;
+    }
+    if (interaction.isButton() && interaction.customId === 'report_unsolved') {
+      const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+      const modal = new ModalBuilder().setCustomId('report_unsolved_modal').setTitle('הבעיה לא נפתרה');
+      modal.addComponents(new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('unsolved_detail').setLabel('מה עדיין לא עובד?').setStyle(TextInputStyle.Paragraph).setPlaceholder('תפרט...').setRequired(true).setMaxLength(500)
+      ));
+      await interaction.showModal(modal);
+      return;
+    }
+    if (interaction.isModalSubmit() && interaction.customId === 'report_unsolved_modal') {
+      const detail = interaction.fields.getTextInputValue('unsolved_detail');
+      await interaction.update({ content: '📝 תודה על הפירוט! העברנו ליוצר.', embeds: interaction.message.embeds, components: [] });
+      try {
+        const { EmbedBuilder } = require('discord.js');
+        const creator = await interaction.client.users.fetch('1266854019767341107');
+        const embed = new EmbedBuilder().setColor(0xE74C3C).setTitle('❌ בעיה לא נפתרה (Victor)')
+          .addFields({ name: '👤 מדווח', value: `${interaction.user.tag}`, inline: true }, { name: '📝 פירוט', value: detail }).setTimestamp();
+        await creator.send({ embeds: [embed] });
+        const logCh = await interaction.client.channels.fetch('1518219986198331422').catch(() => null);
+        if (logCh) await logCh.send({ embeds: [embed] });
+      } catch {}
+      return;
     }
   } catch (err) {
     console.error('Interaction error:', err);
