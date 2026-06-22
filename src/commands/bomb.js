@@ -28,7 +28,7 @@ function buildGrid(game, revealAll) {
           btn.setEmoji('💣').setStyle(ButtonStyle.Danger).setDisabled(true);
         }
       } else {
-        btn.setEmoji('⬜').setStyle(ButtonStyle.Secondary).setDisabled(!!game.ended);
+        btn.setLabel('​').setStyle(ButtonStyle.Secondary).setDisabled(!!game.ended);
       }
       row.addComponents(btn);
     }
@@ -91,7 +91,8 @@ module.exports = {
     activeGames.set(gameKey, game);
 
     await interaction.editReply({
-      embeds: [new EmbedBuilder().setColor(0x2B2D31).setTitle('💣 Mines 💎')],
+      content: '​',
+      embeds: [],
       components: buildGrid(game, false),
     });
   },
@@ -120,6 +121,7 @@ module.exports = {
       db.addCoins(game.userId, game.guildId, winnings);
       const bal = newBalance();
       return interaction.editReply({
+        content: '',
         embeds: [new EmbedBuilder().setColor(0x2ECC71)
           .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
           .setDescription(`You won: **${total}** 💰\nFound: **${game.found}** 💎\nYou now have: **${bal}** 💰`)],
@@ -139,6 +141,7 @@ module.exports = {
       db.addCoins(game.userId, game.guildId, -game.bet);
       const bal = newBalance();
       return interaction.editReply({
+        content: '',
         embeds: [new EmbedBuilder().setColor(0xE74C3C)
           .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
           .setDescription(`You hit a bomb! 💣\nYou lose: **${game.bet}** 💰\nYou now have: **${bal}** 💰`)],
@@ -157,6 +160,7 @@ module.exports = {
       db.addCoins(game.userId, game.guildId, winnings);
       const bal = newBalance();
       return interaction.editReply({
+        content: '',
         embeds: [new EmbedBuilder().setColor(0xFFD700)
           .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
           .setTitle('🌟💎🌟')
@@ -166,7 +170,8 @@ module.exports = {
     }
 
     return interaction.editReply({
-      embeds: [new EmbedBuilder().setColor(0x2B2D31).setTitle('💣 Mines 💎')],
+      content: '​',
+      embeds: [],
       components: buildGrid(game, false),
     });
   },
