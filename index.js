@@ -20,8 +20,39 @@ for (const file of fs.readdirSync(cmdDir).filter(f => f.endsWith('.js'))) {
   if (cmd.data && cmd.execute) client.commands.set(cmd.data.name, cmd);
 }
 
+async function registerCommands(rest, clientId, guildId) {
+  const cmds = [...client.commands.values()].map(c => c.data.toJSON());
+  if (guildId) {
+    await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: cmds });
+  } else {
+    await rest.put(Routes.applicationCommands(clientId), { body: cmds });
+  }
+  return cmds.length;
+}
+
 client.once(Events.ClientReady, async c => {
   console.log(`✅ ${c.user.tag} online | ${client.commands.size} commands | ${c.guilds.cache.size} guilds`);
+  try {
+    const rest = new REST().setToken(process.env.BOT_TOKEN || '');
+    const count = await registerCommands(rest, c.user.id);
+    console.log(`✅ Registered ${count} global commands`);
+    for (const [id] of c.guilds.cache) {
+      await registerCommands(rest, c.user.id, id);
+    }
+    console.log(`✅ Registered commands in ${c.guilds.cache.size} guilds`);
+  } catch (err) {
+    console.error('Command registration error:', err);
+  }
+});
+
+client.on(Events.GuildCreate, async guild => {
+  try {
+    const rest = new REST().setToken(process.env.BOT_TOKEN || '');
+    await registerCommands(rest, client.user.id, guild.id);
+    console.log(`✅ Registered commands in new guild: ${guild.name}`);
+  } catch (err) {
+    console.error('GuildCreate registration error:', err);
+  }
 });
 
 client.on(Events.InteractionCreate, async interaction => {

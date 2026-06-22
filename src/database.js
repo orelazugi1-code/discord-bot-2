@@ -3,7 +3,9 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 
-const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'data')
+  : (process.env.DATA_DIR || path.join(__dirname, '..', 'data'));
 fs.mkdirSync(dataDir, { recursive: true });
 const db = new DatabaseSync(path.join(dataDir, 'bot.db'));
 db.exec('PRAGMA journal_mode = WAL');
