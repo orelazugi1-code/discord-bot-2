@@ -3,7 +3,7 @@ const { t, get } = require('../i18n');
 
 const CATEGORIES = {
   economy: ['balance', 'daily', 'work', 'crime', 'rob', 'pay', 'deposit', 'withdraw'],
-  games: ['slots', 'coinflip', 'rps', 'dice', 'duel', 'blackjack', 'roulette', 'crash'],
+  games: ['slots', 'coinflip', 'rps', 'dice', 'duel', 'blackjack', 'roulette', 'crash', 'bomb'],
   rpg: ['create', 'profile', 'adventure', 'battle', 'heal'],
   admin: ['give-coins', 'take-coins', 'reset-player'],
   utility: ['top', 'language', 'report', 'help'],

@@ -41,6 +41,13 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
+    // Bomb game buttons
+    if (interaction.isButton() && (interaction.customId.startsWith('bomb_tile:') || interaction.customId.startsWith('bomb_out:'))) {
+      const bombCmd = client.commands.get('bomb');
+      if (bombCmd) await bombCmd.handleButton(interaction, db);
+      return;
+    }
+
     // Crash cash-out button
     if (interaction.isButton() && interaction.customId.startsWith('crash_out:')) {
       const gameKey = interaction.customId.replace('crash_out:', '');

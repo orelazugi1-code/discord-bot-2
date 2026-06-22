@@ -15,18 +15,37 @@ module.exports = {
     }
     db.setCrime(interaction.user.id, interaction.guild.id, new Date(now).toISOString());
     const success = Math.random() < 0.5;
+
     if (success) {
       const amount = rand(300, 1000);
       db.addCoins(interaction.user.id, interaction.guild.id, amount);
       const crime = pick(get(lang, 'crimes'));
-      const embed = new EmbedBuilder().setColor(0x2ECC71)
-        .setDescription(t(lang, 'crime_got', { crime, amount }));
+      const embed = new EmbedBuilder()
+        .setColor(0x2ECC71)
+        .setTitle('🦹 ' + t(lang, 'crime_success_title'))
+        .setDescription(
+          '🏃💨💰\n\n' +
+          t(lang, 'crime_got', { crime, amount })
+        )
+        .setThumbnail(interaction.user.displayAvatarURL({ size: 128 }))
+        .setFooter({ text: t(lang, 'crime_footer_success') });
       await interaction.reply({ embeds: [embed] });
     } else {
       const amount = rand(200, 500);
       db.addCoins(interaction.user.id, interaction.guild.id, -amount);
-      const embed = new EmbedBuilder().setColor(0xE74C3C)
-        .setDescription(t(lang, 'crime_fail', { amount }));
+      const embed = new EmbedBuilder()
+        .setColor(0xE74C3C)
+        .setTitle('🚨 ' + t(lang, 'crime_busted_title') + ' 🚨')
+        .setDescription(
+          '━━━━━━━━━━━━━━━━━\n' +
+          '🚔🚔🚔🚔🚔🚔🚔🚔🚔\n' +
+          '━━━━━━━━━━━━━━━━━\n\n' +
+          '👮 **' + t(lang, 'crime_busted_header') + '** 👮\n\n' +
+          t(lang, 'crime_fail', { amount }) + '\n\n' +
+          '🔒 ' + t(lang, 'crime_busted_jail')
+        )
+        .setThumbnail(interaction.user.displayAvatarURL({ size: 128 }))
+        .setFooter({ text: t(lang, 'crime_footer_fail') });
       await interaction.reply({ embeds: [embed] });
     }
   },

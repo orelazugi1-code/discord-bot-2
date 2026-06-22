@@ -21,19 +21,38 @@ module.exports = {
     if (te.wallet < 50) return interaction.reply({ content: t(lang, 'rob_broke', { target: target.displayName }), ephemeral: true });
     db.setRob(interaction.user.id, interaction.guild.id, new Date(now).toISOString());
     const success = Math.random() < 0.4;
+
     if (success) {
       const pct = rand(10, 30) / 100;
       const amount = Math.floor(te.wallet * pct);
       db.addCoins(interaction.user.id, interaction.guild.id, amount);
       db.addCoins(target.id, interaction.guild.id, -amount);
-      const embed = new EmbedBuilder().setColor(0x2ECC71)
-        .setDescription(t(lang, 'rob_got', { target: target.displayName, amount }));
+      const embed = new EmbedBuilder()
+        .setColor(0x2ECC71)
+        .setTitle('💰 ' + t(lang, 'rob_success_title'))
+        .setDescription(
+          '🏃💨\n\n' +
+          t(lang, 'rob_got', { target: target.displayName, amount })
+        )
+        .setThumbnail(target.displayAvatarURL({ size: 128 }))
+        .setFooter({ text: t(lang, 'rob_footer_success') });
       await interaction.reply({ embeds: [embed] });
     } else {
       const amount = rand(100, 300);
       db.addCoins(interaction.user.id, interaction.guild.id, -amount);
-      const embed = new EmbedBuilder().setColor(0xE74C3C)
-        .setDescription(t(lang, 'rob_fail', { amount }));
+      const embed = new EmbedBuilder()
+        .setColor(0xE74C3C)
+        .setTitle('🚨 ' + t(lang, 'rob_busted_title') + ' 🚨')
+        .setDescription(
+          '━━━━━━━━━━━━━━━━━\n' +
+          '🚔🚔🚔🚔🚔🚔🚔🚔🚔\n' +
+          '━━━━━━━━━━━━━━━━━\n\n' +
+          '👮 **' + t(lang, 'rob_busted_header') + '** 👮\n\n' +
+          t(lang, 'rob_fail', { amount }) + '\n\n' +
+          '🔒 ' + t(lang, 'rob_busted_jail')
+        )
+        .setThumbnail(interaction.user.displayAvatarURL({ size: 128 }))
+        .setFooter({ text: t(lang, 'rob_footer_fail') });
       await interaction.reply({ embeds: [embed] });
     }
   },
