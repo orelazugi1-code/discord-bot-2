@@ -31,6 +31,30 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
+    // Blackjack buttons
+    if (interaction.isButton() && interaction.customId.startsWith('bj_')) {
+      const [actionPart, ...keyParts] = interaction.customId.split(':');
+      const action = actionPart.replace('bj_', '');
+      const gameKey = keyParts.join(':');
+      const bjCmd = client.commands.get('blackjack');
+      if (bjCmd) await bjCmd.handleButton(interaction, action, gameKey, db);
+      return;
+    }
+
+    // Crash cash-out button
+    if (interaction.isButton() && interaction.customId.startsWith('crash_out:')) {
+      const gameKey = interaction.customId.replace('crash_out:', '');
+      const crashCmd = client.commands.get('crash');
+      if (!crashCmd) return;
+      const game = crashCmd.activeGames.get(gameKey);
+      if (!game) return interaction.deferUpdate().catch(() => {});
+      if (interaction.user.id !== game.userId) return interaction.reply({ content: '❌', ephemeral: true });
+      game.cashedOut = true;
+      game.cashOutMult = game.multiplier;
+      await interaction.deferUpdate();
+      return;
+    }
+
     // Report feedback buttons
     if (interaction.isButton() && interaction.customId === 'report_solved') {
       await interaction.update({ content: '✅ שמחים לשמוע שהבעיה נפתרה! תודה שדיווחת 💪', embeds: interaction.message.embeds, components: [] });
