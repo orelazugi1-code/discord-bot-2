@@ -93,6 +93,49 @@ client.on(Events.InteractionCreate, async interaction => {
       return;
     }
 
+    // Owner report handling buttons (from log channel)
+    if (interaction.isButton() && interaction.customId.startsWith('report_handled:')) {
+      const reporterId = interaction.customId.split(':')[1];
+      await interaction.update({ content: '✅ הדיווח טופל — נשלח עדכון למדווח', embeds: interaction.message.embeds, components: [] });
+      try {
+        const reporter = await interaction.client.users.fetch(reporterId);
+        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        const embed = new EmbedBuilder().setColor(0x2ECC71).setTitle('✅ הדיווח שלך טופל!')
+          .setDescription('הבעיה שדיווחת עליה תוקנה. תודה שעזרת לנו להשתפר!').setTimestamp();
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('report_solved').setLabel('הבעיה נפתרה').setEmoji('✅').setStyle(ButtonStyle.Success),
+          new ButtonBuilder().setCustomId('report_unsolved').setLabel('הבעיה לא נפתרה').setEmoji('❌').setStyle(ButtonStyle.Danger)
+        );
+        await reporter.send({ embeds: [embed], components: [row] });
+      } catch {}
+      return;
+    }
+    if (interaction.isButton() && interaction.customId.startsWith('report_not_handled:')) {
+      const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+      const reporterId = interaction.customId.split(':')[1];
+      const modal = new ModalBuilder().setCustomId(`report_reject_modal:${reporterId}`).setTitle('הדיווח לא טופל');
+      modal.addComponents(new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('reject_reason').setLabel('סיבה / הסבר למדווח').setStyle(TextInputStyle.Paragraph).setPlaceholder('למה הדיווח לא טופל...').setRequired(true).setMaxLength(500)
+      ));
+      await interaction.showModal(modal);
+      return;
+    }
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('report_reject_modal:')) {
+      const reporterId = interaction.customId.split(':')[1];
+      const reason = interaction.fields.getTextInputValue('reject_reason');
+      await interaction.update({ content: `❌ הדיווח לא טופל — ${reason}`, embeds: interaction.message.embeds, components: [] });
+      try {
+        const reporter = await interaction.client.users.fetch(reporterId);
+        const { EmbedBuilder } = require('discord.js');
+        const embed = new EmbedBuilder().setColor(0xE74C3C).setTitle('❌ עדכון לגבי הדיווח שלך')
+          .setDescription(reason).setTimestamp();
+        await reporter.send({ embeds: [embed] });
+        const logCh = await interaction.client.channels.fetch('1518219986198331422').catch(() => null);
+        if (logCh) await logCh.send({ embeds: [embed] });
+      } catch {}
+      return;
+    }
+
     // Report feedback buttons
     if (interaction.isButton() && interaction.customId === 'report_solved') {
       await interaction.update({ content: '✅ שמחים לשמוע שהבעיה נפתרה! תודה שדיווחת 💪', embeds: interaction.message.embeds, components: [] });
