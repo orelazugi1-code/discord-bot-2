@@ -2,26 +2,16 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const { t } = require('../i18n');
 const { rand } = require('../utils');
 
-const MULT_TABLE = {
-  2: [1.1, 1.25, 1.5, 1.8, 2.2, 2.8, 3.5],
-  3: [1.15, 1.4, 1.8, 2.3, 3.0, 4.0],
-  4: [1.2, 1.6, 2.2, 3.2, 5.0],
-  5: [1.4, 2.0, 3.5, 6.0],
-  6: [1.8, 3.0, 7.0],
-};
+const TOTAL = 9;
+
+function getMultiplier(found, bombCount) {
+  const diamonds = TOTAL - bombCount;
+  let prob = 1.0;
+  for (let i = 0; i < found; i++) prob *= (diamonds - i) / (TOTAL - i);
+  return Math.max(1.0, Math.round((0.95 / prob) * 100) / 100);
+}
 
 const activeGames = new Map();
-
-function buildMultList(game) {
-  const mults = MULT_TABLE[game.bombCount];
-  return mults.map((m, i) => {
-    const done = i < game.found;
-    const next = i === game.found;
-    const icon = done ? '✅' : next ? '➡️' : '⬜';
-    const val = next ? `**×${m.toFixed(2)}**` : `×${m.toFixed(2)}`;
-    return `${icon} 💎×${i + 1} = ${val}`;
-  }).join('\n');
-}
 
 function buildGrid(game, revealAll) {
   const rows = [];
@@ -45,32 +35,30 @@ function buildGrid(game, revealAll) {
     rows.push(row);
   }
   if (!game.ended) {
-    const payout = Math.floor(game.bet * game.currentMult);
+    const profit = Math.floor(game.bet * game.currentMult) - game.bet;
     rows.push(new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`bomb_out:${game.key}`)
-        .setLabel(`💰 Cash Out — ${payout}`)
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(game.found === 0)
+        .setLabel('Cash Out')
+        .setEmoji('💰')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`bomb_profit:${game.key}`)
+        .setLabel(`Profit: ${profit}`)
+        .setEmoji('💎')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(true)
     ));
   }
   return rows;
-}
-
-function buildEmbed(game, status, color) {
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle('💣 ' + t(game.lang, 'bomb_title') + ' 💎')
-    .setDescription(buildMultList(game) + '\n\n' + (status || ''))
-    .setFooter({ text: t(game.lang, 'bomb_bet_footer', { amount: game.bet, bombs: game.bombCount }) });
 }
 
 module.exports = {
   activeGames,
   data: new SlashCommandBuilder()
     .setName('bomb')
-    .setDescription('משחק פצצות ויהלומים — מצא את היהלומים, תיזהר מפצצות!')
-    .setDescriptionLocalizations({ 'en-US': 'Bombs & Diamonds — find diamonds, avoid bombs!', 'en-GB': 'Bombs & Diamonds — find diamonds, avoid bombs!' })
+    .setDescription('משחק פצצות ויהלומים — מצא את היהלומים!')
+    .setDescriptionLocalizations({ 'en-US': 'Bombs & Diamonds — find the diamonds!', 'en-GB': 'Bombs & Diamonds — find the diamonds!' })
     .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
 
   async execute(interaction, db) {
@@ -84,9 +72,9 @@ module.exports = {
 
     await interaction.deferReply();
 
-    const bombCount = rand(2, 6);
-    const tiles = Array(9).fill(null).map(() => ({ type: 'diamond', revealed: false }));
-    const positions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    const bombCount = rand(2, 5);
+    const tiles = Array(TOTAL).fill(null).map(() => ({ type: 'diamond', revealed: false }));
+    const positions = Array.from({ length: TOTAL }, (_, i) => i);
     for (let i = positions.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [positions[i], positions[j]] = [positions[j], positions[i]];
@@ -95,7 +83,7 @@ module.exports = {
 
     const game = {
       key: gameKey, tiles, bet, bombCount,
-      diamondCount: 9 - bombCount,
+      diamondCount: TOTAL - bombCount,
       found: 0, currentMult: 1.0,
       userId: interaction.user.id, guildId: interaction.guild.id,
       lang, ended: false,
@@ -103,7 +91,7 @@ module.exports = {
     activeGames.set(gameKey, game);
 
     await interaction.editReply({
-      embeds: [buildEmbed(game, '🎯 ' + t(lang, 'bomb_pick'), 0xFFD700)],
+      embeds: [new EmbedBuilder().setColor(0x2B2D31).setTitle('💣 Mines 💎')],
       components: buildGrid(game, false),
     });
 
@@ -113,7 +101,7 @@ module.exports = {
         activeGames.delete(gameKey);
         db.addCoins(game.userId, game.guildId, -bet);
         interaction.editReply({
-          embeds: [buildEmbed(game, '⏰ ' + t(lang, 'bomb_timeout', { amount: bet }), 0xE74C3C)],
+          embeds: [new EmbedBuilder().setColor(0xE74C3C).setTitle('💣💥').setDescription('⏰ ' + t(lang, 'bomb_timeout', { amount: bet }))],
           components: buildGrid(game, true),
         }).catch(() => {});
       }
@@ -138,7 +126,7 @@ module.exports = {
       const winnings = total - game.bet;
       db.addCoins(game.userId, game.guildId, winnings);
       return interaction.editReply({
-        embeds: [buildEmbed(game, '💰 ' + t(game.lang, 'bomb_cashout', { mult: game.currentMult.toFixed(2), amount: total }), 0x2ECC71)],
+        embeds: [new EmbedBuilder().setColor(0x2ECC71).setDescription('💰 **+' + winnings + '** ' + t(game.lang, 'bomb_coins'))],
         components: buildGrid(game, true),
       });
     }
@@ -154,14 +142,13 @@ module.exports = {
       activeGames.delete(gameKey);
       db.addCoins(game.userId, game.guildId, -game.bet);
       return interaction.editReply({
-        embeds: [buildEmbed(game, '💥💣 ' + t(game.lang, 'bomb_exploded', { amount: game.bet }), 0xE74C3C)],
+        embeds: [new EmbedBuilder().setColor(0xE74C3C).setDescription('💣 **-' + game.bet + '** ' + t(game.lang, 'bomb_coins'))],
         components: buildGrid(game, true),
       });
     }
 
     game.found++;
-    const mults = MULT_TABLE[game.bombCount];
-    game.currentMult = mults[game.found - 1] || game.currentMult;
+    game.currentMult = getMultiplier(game.found, game.bombCount);
 
     if (game.found === game.diamondCount) {
       game.ended = true;
@@ -170,13 +157,13 @@ module.exports = {
       const winnings = total - game.bet;
       db.addCoins(game.userId, game.guildId, winnings);
       return interaction.editReply({
-        embeds: [buildEmbed(game, '🌟✨ ' + t(game.lang, 'bomb_all_found', { mult: game.currentMult.toFixed(2), amount: total }), 0xFFD700)],
+        embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('🌟💎🌟').setDescription('💰 **+' + winnings + '** ' + t(game.lang, 'bomb_coins'))],
         components: buildGrid(game, true),
       });
     }
 
     return interaction.editReply({
-      embeds: [buildEmbed(game, '💎 ' + t(game.lang, 'bomb_diamond_found'), 0x3498DB)],
+      embeds: [new EmbedBuilder().setColor(0x2B2D31).setTitle('💣 Mines 💎')],
       components: buildGrid(game, false),
     });
   },
