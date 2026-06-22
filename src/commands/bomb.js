@@ -21,12 +21,14 @@ function buildGrid(game, revealAll) {
       const i = r * 3 + c;
       const tile = game.tiles[i];
       const btn = new ButtonBuilder().setCustomId(`bomb_tile:${game.key}:${i}`);
-      if (tile.revealed || revealAll) {
+      if (tile.revealed) {
         if (tile.type === 'diamond') {
           btn.setEmoji('💎').setStyle(ButtonStyle.Success).setDisabled(true);
         } else {
-          btn.setEmoji('💣').setStyle(ButtonStyle.Danger).setDisabled(true);
+          btn.setEmoji('❌').setStyle(ButtonStyle.Danger).setDisabled(true);
         }
+      } else if (revealAll) {
+        btn.setEmoji('⬛').setStyle(ButtonStyle.Secondary).setDisabled(true);
       } else {
         btn.setLabel('​').setStyle(ButtonStyle.Secondary).setDisabled(!!game.ended);
       }
