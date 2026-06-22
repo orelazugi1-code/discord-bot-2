@@ -86,7 +86,7 @@ module.exports = {
       diamondCount: TOTAL - bombCount,
       found: 0, currentMult: 1.0,
       userId: interaction.user.id, guildId: interaction.guild.id,
-      lang, ended: false,
+      lang, ended: false, interaction,
     };
     activeGames.set(gameKey, game);
 
@@ -94,18 +94,6 @@ module.exports = {
       embeds: [new EmbedBuilder().setColor(0x2B2D31).setTitle('💣 Mines 💎')],
       components: buildGrid(game, false),
     });
-
-    setTimeout(() => {
-      if (activeGames.has(gameKey) && !game.ended) {
-        game.ended = true;
-        activeGames.delete(gameKey);
-        db.addCoins(game.userId, game.guildId, -bet);
-        interaction.editReply({
-          embeds: [new EmbedBuilder().setColor(0xE74C3C).setTitle('💣💥').setDescription('⏰ ' + t(lang, 'bomb_timeout', { amount: bet }))],
-          components: buildGrid(game, true),
-        }).catch(() => {});
-      }
-    }, 60000);
   },
 
   async handleButton(interaction, db) {
@@ -119,14 +107,22 @@ module.exports = {
 
     await interaction.deferUpdate();
 
+    const newBalance = () => {
+      const e = db.getEcon(game.userId, game.guildId);
+      return e.wallet;
+    };
+
     if (action === 'bomb_out') {
       game.ended = true;
       activeGames.delete(gameKey);
       const total = Math.floor(game.bet * game.currentMult);
       const winnings = total - game.bet;
       db.addCoins(game.userId, game.guildId, winnings);
+      const bal = newBalance();
       return interaction.editReply({
-        embeds: [new EmbedBuilder().setColor(0x2ECC71).setDescription('💰 **+' + winnings + '** ' + t(game.lang, 'bomb_coins'))],
+        embeds: [new EmbedBuilder().setColor(0x2ECC71)
+          .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+          .setDescription(`You won: **${total}** 💰\nFound: **${game.found}** 💎\nYou now have: **${bal}** 💰`)],
         components: buildGrid(game, true),
       });
     }
@@ -141,8 +137,11 @@ module.exports = {
       game.ended = true;
       activeGames.delete(gameKey);
       db.addCoins(game.userId, game.guildId, -game.bet);
+      const bal = newBalance();
       return interaction.editReply({
-        embeds: [new EmbedBuilder().setColor(0xE74C3C).setDescription('💣 **-' + game.bet + '** ' + t(game.lang, 'bomb_coins'))],
+        embeds: [new EmbedBuilder().setColor(0xE74C3C)
+          .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+          .setDescription(`You hit a bomb! 💣\nYou lose: **${game.bet}** 💰\nYou now have: **${bal}** 💰`)],
         components: buildGrid(game, true),
       });
     }
@@ -156,8 +155,12 @@ module.exports = {
       const total = Math.floor(game.bet * game.currentMult);
       const winnings = total - game.bet;
       db.addCoins(game.userId, game.guildId, winnings);
+      const bal = newBalance();
       return interaction.editReply({
-        embeds: [new EmbedBuilder().setColor(0xFFD700).setTitle('🌟💎🌟').setDescription('💰 **+' + winnings + '** ' + t(game.lang, 'bomb_coins'))],
+        embeds: [new EmbedBuilder().setColor(0xFFD700)
+          .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+          .setTitle('🌟💎🌟')
+          .setDescription(`You won: **${total}** 💰\nFound: **${game.found}** 💎\nYou now have: **${bal}** 💰`)],
         components: buildGrid(game, true),
       });
     }
