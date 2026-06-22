@@ -34,8 +34,8 @@ client.once(Events.ClientReady, async c => {
   console.log(`✅ ${c.user.tag} online | ${client.commands.size} commands | ${c.guilds.cache.size} guilds`);
   try {
     const rest = new REST().setToken(process.env.BOT_TOKEN || '');
-    const count = await registerCommands(rest, c.user.id);
-    console.log(`✅ Registered ${count} global commands`);
+    // Clear global commands to avoid duplicates
+    await rest.put(Routes.applicationCommands(c.user.id), { body: [] });
     for (const [id] of c.guilds.cache) {
       await registerCommands(rest, c.user.id, id);
     }
