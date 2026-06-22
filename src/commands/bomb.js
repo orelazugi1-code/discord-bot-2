@@ -136,7 +136,7 @@ module.exports = {
         content: '',
         embeds: [new EmbedBuilder().setColor(0xE74C3C)
           .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
-          .setDescription(`You hit a bomb! 💣\nYou lose: **${game.bet}** 💰\nYou now have: **${bal}** 💰`)],
+          .setDescription(`You lost! ❌\nYou lose: **${game.bet}** 💰\nYou now have: **${bal}** 💰`)],
         components: buildGrid(game, true),
       });
     }
