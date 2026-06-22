@@ -9,6 +9,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.MessageContent,
   ],
 });
 
@@ -43,8 +44,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // Bomb game buttons
     if (interaction.isButton() && (interaction.customId.startsWith('bomb_tile:') || interaction.customId.startsWith('bomb_out:'))) {
-      const bombCmd = client.commands.get('bomb');
-      if (bombCmd) await bombCmd.handleButton(interaction, db);
+      await bombModule.handleButton(interaction, db);
       return;
     }
 
@@ -101,6 +101,22 @@ client.on(Events.InteractionCreate, async interaction => {
     const msg = { content: '❌ שגיאה, נסה שוב.', ephemeral: true };
     if (interaction.replied || interaction.deferred) interaction.followUp(msg).catch(() => {});
     else interaction.reply(msg).catch(() => {});
+  }
+});
+
+// $bomb prefix command
+const bombModule = require('./src/commands/bomb');
+client.on(Events.MessageCreate, async message => {
+  if (message.author.bot || !message.guild) return;
+  if (!message.content.toLowerCase().startsWith('$bomb')) return;
+  try {
+    const args = message.content.split(/\s+/);
+    const bet = parseInt(args[1]);
+    if (!bet || bet < 10) return message.reply('❌ שימוש: `$bomb <סכום>` (מינימום 10)');
+    await bombModule.executePrefix(message, bet, db);
+  } catch (err) {
+    console.error('$bomb error:', err);
+    message.reply('❌ שגיאה, נסה שוב.').catch(() => {});
   }
 });
 

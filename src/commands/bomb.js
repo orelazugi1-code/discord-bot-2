@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { t } = require('../i18n');
 const { rand } = require('../utils');
 
@@ -53,48 +53,40 @@ function buildGrid(game, revealAll) {
   return rows;
 }
 
+function createGame(userId, guildId, bet, lang) {
+  const gameKey = `${userId}:${guildId}`;
+  const bombCount = rand(2, 5);
+  const tiles = Array(TOTAL).fill(null).map(() => ({ type: 'diamond', revealed: false }));
+  const positions = Array.from({ length: TOTAL }, (_, i) => i);
+  for (let i = positions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [positions[i], positions[j]] = [positions[j], positions[i]];
+  }
+  for (let i = 0; i < bombCount; i++) tiles[positions[i]].type = 'bomb';
+
+  return {
+    key: gameKey, tiles, bet, bombCount,
+    diamondCount: TOTAL - bombCount,
+    found: 0, currentMult: 1.0,
+    userId, guildId, lang, ended: false,
+  };
+}
+
 module.exports = {
   activeGames,
-  data: new SlashCommandBuilder()
-    .setName('bomb')
-    .setDescription('משחק פצצות ויהלומים — מצא את היהלומים!')
-    .setDescriptionLocalizations({ 'en-US': 'Bombs & Diamonds — find the diamonds!', 'en-GB': 'Bombs & Diamonds — find the diamonds!' })
-    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
 
-  async execute(interaction, db) {
-    const lang = db.getLang(interaction.user.id);
-    const bet = interaction.options.getInteger('bet');
-    const e = db.getEcon(interaction.user.id, interaction.guild.id);
-    if (e.wallet < bet) return interaction.reply({ content: t(lang, 'bomb_broke'), ephemeral: true });
+  async executePrefix(message, bet, db) {
+    const lang = db.getLang(message.author.id);
+    const e = db.getEcon(message.author.id, message.guild.id);
+    if (e.wallet < bet) return message.reply(t(lang, 'bomb_broke'));
 
-    const gameKey = `${interaction.user.id}:${interaction.guild.id}`;
-    if (activeGames.has(gameKey)) return interaction.reply({ content: t(lang, 'bomb_already'), ephemeral: true });
+    const gameKey = `${message.author.id}:${message.guild.id}`;
+    if (activeGames.has(gameKey)) return message.reply(t(lang, 'bomb_already'));
 
-    await interaction.deferReply();
-
-    const bombCount = rand(2, 5);
-    const tiles = Array(TOTAL).fill(null).map(() => ({ type: 'diamond', revealed: false }));
-    const positions = Array.from({ length: TOTAL }, (_, i) => i);
-    for (let i = positions.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [positions[i], positions[j]] = [positions[j], positions[i]];
-    }
-    for (let i = 0; i < bombCount; i++) tiles[positions[i]].type = 'bomb';
-
-    const game = {
-      key: gameKey, tiles, bet, bombCount,
-      diamondCount: TOTAL - bombCount,
-      found: 0, currentMult: 1.0,
-      userId: interaction.user.id, guildId: interaction.guild.id,
-      lang, ended: false, interaction,
-    };
+    const game = createGame(message.author.id, message.guild.id, bet, lang);
     activeGames.set(gameKey, game);
 
-    await interaction.editReply({
-      content: '​',
-      embeds: [],
-      components: buildGrid(game, false),
-    });
+    await message.reply({ components: buildGrid(game, false) });
   },
 
   async handleButton(interaction, db) {
@@ -170,8 +162,6 @@ module.exports = {
     }
 
     return interaction.editReply({
-      content: '​',
-      embeds: [],
       components: buildGrid(game, false),
     });
   },
