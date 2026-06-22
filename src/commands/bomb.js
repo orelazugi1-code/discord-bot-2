@@ -1,15 +1,13 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { t } = require('../i18n');
+const { rand } = require('../utils');
 
 const MULT_TABLE = {
-  1: [1.05, 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 2.0],
   2: [1.1, 1.25, 1.5, 1.8, 2.2, 2.8, 3.5],
   3: [1.15, 1.4, 1.8, 2.3, 3.0, 4.0],
   4: [1.2, 1.6, 2.2, 3.2, 5.0],
   5: [1.4, 2.0, 3.5, 6.0],
   6: [1.8, 3.0, 7.0],
-  7: [2.5, 10.0],
-  8: [20.0],
 };
 
 const activeGames = new Map();
@@ -51,7 +49,7 @@ function buildGrid(game, revealAll) {
     rows.push(new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`bomb_out:${game.key}`)
-        .setLabel(`💰 Cash Out — ${payout} coins`)
+        .setLabel(`💰 Cash Out — ${payout}`)
         .setStyle(ButtonStyle.Primary)
         .setDisabled(game.found === 0)
     ));
@@ -60,17 +58,11 @@ function buildGrid(game, revealAll) {
 }
 
 function buildEmbed(game, status, color) {
-  const lang = game.lang;
-  const payout = Math.floor(game.bet * game.currentMult);
-  let desc = buildMultList(game) + '\n\n';
-  desc += `💎 ${t(lang, 'bomb_found')}: **${game.found}** / **${game.diamondCount}**\n`;
-  desc += `💰 ${t(lang, 'bomb_payout')}: **${payout}** ${t(lang, 'bomb_coins')}\n`;
-  desc += '\n' + (status || '');
   return new EmbedBuilder()
     .setColor(color)
-    .setTitle('💣 ' + t(lang, 'bomb_title') + ' 💎')
-    .setDescription(desc)
-    .setFooter({ text: t(lang, 'bomb_bet_footer', { amount: game.bet, bombs: game.bombCount }) });
+    .setTitle('💣 ' + t(game.lang, 'bomb_title') + ' 💎')
+    .setDescription(buildMultList(game) + '\n\n' + (status || ''))
+    .setFooter({ text: t(game.lang, 'bomb_bet_footer', { amount: game.bet, bombs: game.bombCount }) });
 }
 
 module.exports = {
@@ -79,13 +71,11 @@ module.exports = {
     .setName('bomb')
     .setDescription('משחק פצצות ויהלומים — מצא את היהלומים, תיזהר מפצצות!')
     .setDescriptionLocalizations({ 'en-US': 'Bombs & Diamonds — find diamonds, avoid bombs!', 'en-GB': 'Bombs & Diamonds — find diamonds, avoid bombs!' })
-    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10))
-    .addIntegerOption(o => o.setName('bombs').setDescription('כמה פצצות 1-8 (ברירת מחדל 3)').setDescriptionLocalizations({ 'en-US': 'Number of bombs 1-8 (default 3)', 'en-GB': 'Number of bombs 1-8 (default 3)' }).setMinValue(1).setMaxValue(8)),
+    .addIntegerOption(o => o.setName('bet').setDescription('כמה להמר').setDescriptionLocalizations({ 'en-US': 'How much to bet', 'en-GB': 'How much to bet' }).setRequired(true).setMinValue(10)),
 
   async execute(interaction, db) {
     const lang = db.getLang(interaction.user.id);
     const bet = interaction.options.getInteger('bet');
-    const bombCount = interaction.options.getInteger('bombs') || 3;
     const e = db.getEcon(interaction.user.id, interaction.guild.id);
     if (e.wallet < bet) return interaction.reply({ content: t(lang, 'bomb_broke'), ephemeral: true });
 
@@ -94,6 +84,7 @@ module.exports = {
 
     await interaction.deferReply();
 
+    const bombCount = rand(2, 6);
     const tiles = Array(9).fill(null).map(() => ({ type: 'diamond', revealed: false }));
     const positions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     for (let i = positions.length - 1; i > 0; i--) {
